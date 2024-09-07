@@ -1,6 +1,9 @@
+
+
+
 require('../models/database');
-const Category = require('../models/Category');
-const Recipe = require('../models/Recipe');
+const Recipe = require('../models/Recipe'); // Import your Recipe model
+const Category = require('../models/Category'); // Import your Category model (if you have one)
 
 /**
  * GET /
@@ -19,9 +22,20 @@ exports.homepage = async(req, res) => {
 
     res.render('index', { title: 'Cooking Blog - Home', categories, food } );
   } catch (error) {
-    res.satus(500).send({message: error.message || "Error Occured" });
+    res.status(500).send({message: error.message || "Error Occured" });
   }
 }
+/**
+ * GET /about
+ * About 
+ */
+exports.about = async (req, res) => {
+  try {
+    res.render('about', { title: 'Cooking Blog - About' });
+  } catch (error) {
+    res.status(500).send({ message: error.message || "Error Occurred" });
+  }
+};
 
 /**
  * GET /categories
@@ -37,7 +51,6 @@ exports.exploreCategories = async(req, res) => {
   }
 } 
 
-
 /**
  * GET /categories/:id
  * Categories By Id
@@ -47,9 +60,9 @@ exports.exploreCategoriesById = async(req, res) => {
     let categoryId = req.params.id;
     const limitNumber = 20;
     const categoryById = await Recipe.find({ 'category': categoryId }).limit(limitNumber);
-    res.render('categories', { title: 'Cooking Blog - Categoreis', categoryById } );
+    res.render('categories', { title: 'Cooking Blog - Categories', categoryById } );
   } catch (error) {
-    res.satus(500).send({message: error.message || "Error Occured" });
+    res.status(500).send({message: error.message || "Error Occured" });
   }
 } 
  
@@ -63,10 +76,9 @@ exports.exploreRecipe = async(req, res) => {
     const recipe = await Recipe.findById(recipeId);
     res.render('recipe', { title: 'Cooking Blog - Recipe', recipe } );
   } catch (error) {
-    res.satus(500).send({message: error.message || "Error Occured" });
+    res.status(500).send({message: error.message || "Error Occured" });
   }
 } 
-
 
 /**
  * POST /search
@@ -78,14 +90,13 @@ exports.searchRecipe = async(req, res) => {
     let recipe = await Recipe.find( { $text: { $search: searchTerm, $diacriticSensitive: true } });
     res.render('search', { title: 'Cooking Blog - Search', recipe } );
   } catch (error) {
-    res.satus(500).send({message: error.message || "Error Occured" });
+    res.status(500).send({message: error.message || "Error Occured" });
   }
-  
 }
 
 /**
  * GET /explore-latest
- * Explplore Latest 
+ * Explore Latest 
 */
 exports.exploreLatest = async(req, res) => {
   try {
@@ -93,11 +104,9 @@ exports.exploreLatest = async(req, res) => {
     const recipe = await Recipe.find({}).sort({ _id: -1 }).limit(limitNumber);
     res.render('explore-latest', { title: 'Cooking Blog - Explore Latest', recipe } );
   } catch (error) {
-    res.satus(500).send({message: error.message || "Error Occured" });
+    res.status(500).send({message: error.message || "Error Occured" });
   }
 } 
-
-
 
 /**
  * GET /explore-random
@@ -110,10 +119,9 @@ exports.exploreRandom = async(req, res) => {
     let recipe = await Recipe.findOne().skip(random).exec();
     res.render('explore-random', { title: 'Cooking Blog - Explore Latest', recipe } );
   } catch (error) {
-    res.satus(500).send({message: error.message || "Error Occured" });
+    res.status(500).send({message: error.message || "Error Occured" });
   }
 } 
-
 
 /**
  * GET /submit-recipe
@@ -131,7 +139,6 @@ exports.submitRecipe = async(req, res) => {
 */
 exports.submitRecipeOnPost = async(req, res) => {
   try {
-
     let imageUploadFile;
     let uploadPath;
     let newImageName;
@@ -139,16 +146,13 @@ exports.submitRecipeOnPost = async(req, res) => {
     if(!req.files || Object.keys(req.files).length === 0){
       console.log('No Files where uploaded.');
     } else {
-
       imageUploadFile = req.files.image;
       newImageName = Date.now() + imageUploadFile.name;
-
       uploadPath = require('path').resolve('./') + '/public/uploads/' + newImageName;
 
       imageUploadFile.mv(uploadPath, function(err){
-        if(err) return res.satus(500).send(err);
+        if(err) return res.status(500).send(err);
       })
-
     }
 
     const newRecipe = new Recipe({
@@ -165,111 +169,119 @@ exports.submitRecipeOnPost = async(req, res) => {
     req.flash('infoSubmit', 'Recipe has been added.')
     res.redirect('/submit-recipe');
   } catch (error) {
-    // res.json(error);
     req.flash('infoErrors', error);
     res.redirect('/submit-recipe');
+  }
+}
+exports.editRecipe = async (req, res) => {
+  try {
+    const recipe = await Recipe.findOne({ name: req.params.name });
+    if (!recipe) {
+      return res.status(404).send('Recipe not found');
+    }
+    const categories = await Category.find(); // Assuming you have a Category model to fetch all categories
+    res.render('update-recipe', { recipe, categories });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
+};
+
+
+/**
+ * GET /delete-recipe
+ * Delete Recipe
+ */
+exports.deleteRecipe = async (req, res) => {
+  try {
+    const recipes = await Recipe.find({});
+    res.render('delete-recipe', { title: 'Cooking Blog - Delete Recipe', recipes, infoSubmitObj: '', infoErrorsObj: [] });
+  } catch (error) {
+    res.status(500).send({ message: error.message || "Error Occured" });
+  }
+}
+
+/**
+ * POST /delete-recipe
+ * Delete Recipe
+ */
+exports.deleteRecipeOnPost = async (req, res) => {
+  try {
+    const recipeId = req.body.recipeId;
+    const recipe = await Recipe.findById(recipeId);
+
+    if (recipe) {
+      await Recipe.deleteOne({ _id: recipeId });
+      res.render('delete-recipe', { title: 'Cooking Blog - Delete Recipe', recipes: await Recipe.find({}), infoSubmitObj: 'Recipe deleted successfully!', infoErrorsObj: [] });
+    } else {
+      res.render('delete-recipe', { title: 'Cooking Blog - Delete Recipe', recipes: await Recipe.find({}), infoSubmitObj: '', infoErrorsObj: [{ message: 'Recipe not found' }] });
+    }
+  } catch (error) {
+    res.status(500).send({ message: error.message || "Error Occured" });
   }
 }
 
 
 
 
-// Delete Recipe
-// async function deleteRecipe(){
-//   try {
-//     await Recipe.deleteOne({ name: 'New Recipe From Form' });
-//   } catch (error) {
-//     console.log(error);
-//   }
-// }
-// deleteRecipe();
-
-
-// Update Recipe
-// async function updateRecipe(){
-//   try {
-//     const res = await Recipe.updateOne({ name: 'New Recipe' }, { name: 'New Recipe Updated' });
-//     res.n; // Number of documents matched
-//     res.nModified; // Number of documents modified
-//   } catch (error) {
-//     console.log(error);
-//   }
-// }
-// updateRecipe();
-
+// Existing controller methods...
 
 /**
  * Dummy Data Example 
 */
 
-// async function insertDymmyCategoryData(){
-//   try {
-//     await Category.insertMany([
-//       {
-//         "name": "Thai",
-//         "image": "thai-food.jpg"
-//       },
-//       {
-//         "name": "American",
-//         "image": "american-food.jpg"
-//       }, 
-//       {
-//         "name": "Chinese",
-//         "image": "chinese-food.jpg"
-//       },
-//       {
-//         "name": "Mexican",
-//         "image": "mexican-food.jpg"
-//       }, 
-//       {
-//         "name": "Indian",
-//         "image": "indian-food.jpg"
-//       },
-//       {
-//         "name": "Spanish",
-//         "image": "spanish-food.jpg"
-//       }
-//     ]);
-//   } catch (error) {
-//     console.log('err', + error)
-//   }
-// }
+async function insertDymmyCategoryData(){
+  try {
+    await Category.insertMany([
 
-// insertDymmyCategoryData();
+      {
+        "name": "American",
+        "image": "american-food.jpg"
+      }, 
+      {
+        "name": "Chinese",
+        "image": "chinese-food.jpg"
+      },
+      {
+        "name": "Mexican",
+        "image": "mexican-food.jpg"
+      }, 
+      {
+        "name": "Indian",
+        "image": "indian-food.jpg"
+      },
+      {
+        "name": "Spanish",
+        "image": "spanish-food.jpg"
+      }
+    ]);
+  } catch (error) {
+    console.log('err', + error)
+  }
+}
 
+insertDymmyCategoryData();
 
-// async function insertDymmyRecipeData(){
-//   try {
-//     await Recipe.insertMany([
-//       { 
-//         "name": "Recipe Name Goes Here",
-//         "description": `Recipe Description Goes Here`,
-//         "email": "recipeemail@raddy.co.uk",
-//         "ingredients": [
-//           "1 level teaspoon baking powder",
-//           "1 level teaspoon cayenne pepper",
-//           "1 level teaspoon hot smoked paprika",
-//         ],
-//         "category": "American", 
-//         "image": "southern-friend-chicken.jpg"
-//       },
-//       { 
-//         "name": "Recipe Name Goes Here",
-//         "description": `Recipe Description Goes Here`,
-//         "email": "recipeemail@raddy.co.uk",
-//         "ingredients": [
-//           "1 level teaspoon baking powder",
-//           "1 level teaspoon cayenne pepper",
-//           "1 level teaspoon hot smoked paprika",
-//         ],
-//         "category": "American", 
-//         "image": "southern-friend-chicken.jpg"
-//       },
-//     ]);
-//   } catch (error) {
-//     console.log('err', + error)
-//   }
-// }
+async function insertDymmyRecipeData(){
+  try {
+    await Recipe.insertMany([
+      { 
+        "name": "Recipe Name Goes Here",
+        "description": `Recipe Description Goes Here`,
+        "email": "recipeemail@raddy.co.uk",
+        "ingredients": [
+          "1 level teaspoon baking powder",
+          "1 level teaspoon cayenne pepper",
+          "1 level teaspoon hot smoked paprika",
+        ],
+        "category": "American", 
+        "image": "southern-friend-chicken.jpg"
+      },
+ 
+    ]);
+  } catch (error) {
+    console.log('err', + error)
+  }
+}
 
-// insertDymmyRecipeData();
-
+insertDymmyRecipeData();

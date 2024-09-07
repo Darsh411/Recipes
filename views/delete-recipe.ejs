@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delete</title>
+</head>
+<body>
+    <h1>Delete Recipe</h1>
+    <form action="/delete-recipe" method="post">
+        <div class="mb-3">
+            <label for="recipeId" class="form-label">Select Recipe to Delete</label>
+            <select class="form-select" name="recipeId" id="recipeId" required>
+                <option value="" disabled selected>Select Recipe</option>
+                <% recipes.forEach(function(recipe) { %>
+                    <option value="<%= recipe._id %>"><%= recipe.name %></option>
+                <% }); %>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-danger">Delete</button>
+    </form>
+
+    <% if (infoErrorsObj.length > 0) { %>
+        <div class="alert alert-danger" role="alert">
+            <ul>
+                <% infoErrorsObj.forEach(function(error) { %>
+                    <li><%= error.message %></li>
+                <% }); %>
+            </ul>
+        </div>
+    <% } %>
+
+    <% if (infoSubmitObj) { %>
+        <div class="alert alert-success" role="alert">
+            <%= infoSubmitObj %>
+        </div>
+    <% } %>
+</body>
+</html>
+
